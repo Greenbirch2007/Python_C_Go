@@ -1,0 +1,38 @@
+Python调用C语言的实现
+
+
+https://www.jb51.net/article/166297.htm
+
+
+Python中的ctypes模块是Python调用C方法中最简单的。
+
+cyptes模块提供了和c语言兼容的数据类型和函数来加载dll文件，因此在调用时不需要
+对源文件做任何的修改
+
+1. 编写.c文件
+2.将c文件便以为.so文件(windows下为DLL)
+
+
+#For Linux
+$ gcc -shared -Wl,-soname,adder -o adder.so -fPIC add.c
+#For Mac
+$ gcc -shared -Wl,-install_name,adder.so -o adder.so -fPIC add.c
+#For windows
+$
+gcc -shared -Wl,-soname,adder -o adder.dll -fPIC add.c
+
+现在在你的Python代码中来调用它
+
+
+from ctypes import *
+#load the shared object file
+adder = CDLL('./adder.so')
+#Find sum of integers
+res_int = adder.add_int(4,5)
+print "Sum of 4 and 5 = " + str(res_int)
+#Find sum of floats
+a = c_float(5.5)
+b = c_float(4.1)
+add_float = adder.add_float
+add_float.restype = c_float
+print "Sum of 5.5 and 4.1 = ", str(add_float(a, b))

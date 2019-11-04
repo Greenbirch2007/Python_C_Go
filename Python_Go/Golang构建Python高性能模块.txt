@@ -1,0 +1,32 @@
+Golang构建Python高性能模块
+
+https://www.cnblogs.com/huangguifeng/p/8931837.html
+
+Python程序需要一些计算量比较大的模块时一般会调用c或者c++的代码来重写，但是c/c++编写代码代价太高，耗费太多的人力，开发周期太长，那么就想到来一个折中的方法是用golang语言。
+
+虽然golang性能比不上c、c++，但是golang天生的高并发，以及编译速度超级快，而且还自带垃圾回收机制，不用开发者自己去管理内存，开发效率高。所以在Python程序遇到大计算量时，可以考虑调用go模块。接下来我们来看看
+如何在利用go模块写Python第三方模块，以及如何在Python中导入并调用。
+
+编译生成动态链接库，生成的.so文件可以被python加载并调用
+
+​
+但是有一个需要注意的地方：
+
+Python是利用ctypes来跟so模块进行交互,其中存在着一个代码的翻译过程，包括数据类型的翻译，如果需要传参获取接收返回值，需要在golang中将参数按照下表对应，定义成C语言的数据类型。
+
+这里列举几个常用的数据类型
+
+ctypes type（ctypes类型)	C type（c语言类型)	Python type（python类型）
+c_bool	_Bool	bool (1)
+c_char	char	1-character bytes object
+c_wchar	wchar_t	1-character string
+c_byte	char	int
+c_char_p	char * (NUL terminated)	1-character bytes object
+c_wchar_p	wchar_t * (NUL terminated)	string or None
+
+
+​
+go build -buildmode=c-shared -o hello.so src/python_go.go
+在python中调用带参数的go模块需要显式指定参数的类型以及返回的数据类型。argtypes指定参数类型，restype
+
+指定返回值类型。
