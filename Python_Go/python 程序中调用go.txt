@@ -1,0 +1,27 @@
+python 程序中调用go
+
+
+https://www.cnblogs.com/huangguifeng/p/8931837.html
+
+
+golang构建Python高性能模块
+
+
+利用go模块写Python第三方模块，以及如何在Python中导入并调用
+
+写好go代码之后重新生成动态链接库
+
+go build -buildmode=c-shared -o hello.so src/hello.go
+(注意版本问题)
+
+在python中调用带参数的go模块需要显式指定参数的类型以及返回的数据类型。
+argtypes指定参数类型，restype指定返回值类型
+
+
+python中调用go模块，并停机两个模块循环1百万次累加的时间，查看go跟python执行效率
+python是开发速度快，go语言在静态语言中开始开发很苦，
+go的高并发可以填充python GIL导致python多线程不是真的多线程的去诶的
+
+注意参数类型的转换
+
+
