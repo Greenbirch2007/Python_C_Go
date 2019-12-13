@@ -1,0 +1,152 @@
+怎样使用 Python 调用 Go 程序 
+
+在python的开发过程中，有时候因为性能的问题，或处于保护代码的需要
+会使用rust，Ｃ,GO这样的静态语言，
+编写一部分代码，并交由Python调用
+
+一般这样的调用过程，都是上述语言，编译成与C语言兼容的动态链接库，再交由Python使用
+
+Demo 演示
+
+先简述一下本文演示环境， Go: v1.10.1, Python: v3.6.5, OSX: v10.13.4 。
+
+使用python调用go,需要３个步骤
+
+１．编写支持动态链接库生成的Go代码
+２．使用go build 生成.so文件
+３．在Python里面通过调用.so文件使用go代码
+
+
+整数降价
+
+
+１．编写go代码
+
+编写符合动态链接库规范的Go代码，只需要3个条件
+
+１．需要import "C",声明使用了cgo,这样才能编写出C兼容的动态链接库
+
+２．需要在Add()函数上加// export Add注释，告诉编译器，
+Add()可以供其他程序调用
+
+３．需要一个空的main()函数　func main(){}
+
+代码非常简单，输入两个int参数，返回一个int参数即可
+
+
+２．编译成动态链接库
+
+从1.5_版本开始，go支持将代码编译成动态链接库，
+只需要一行命令接口编译动态ｌｉａｎｊｉｅｋｕ
+
+
+go build -buildmode=c-shared -o libadd.so libadd.go
+
+
+编译完成后，可以看到文件夹中多了libadd.so与libadd.h两个
+文件，其中libadd.so就是要用到的动态链接库。
+
+对于python来说，不需要libadd.h文件，就可以直接使用，
+但是入股欧使用c或c++调用，就需啊哟通过#include <libadd.h>才能进行加载
+
+
+３．在python中调动
+
+通过调用python调用动态链接库，关键是用cdll.LoadLibrary()
+
+from ctyes import cdll
+
+libadd = cdll.LoadLibrary("./libadd.so")
+
+resp = libadd.Add(222,444)
+print(resp)
+
+整个调用过程非常简单，就完成一次跨语言动态链接库调用
+
+
+字符串拼接
+c语言的中字符串，需要自行分配和管理内存空间，而python
+和go都是通过GC自动管理，所以go与python中的字符串并不能与C语言直接
+进行交互，需要进行显式转换
+
+1.编写go代码
+
+低吗依然满足３个条件，都是为了进行go与c之间的字符串转换
+
+在Concat()函数中，输入与输出参数均为C.char
+这是与C兼容。而在函数内部，则需要将字符串
+转换成GoString，才能进行运算。
+
+所以整个过程就是输入C.char,转换成C.GoString进行运算
+在转换成C.CString返回
+
+
+C字符串内存管理
+
+包含了#include<stdlib.h>和defer C.free(unsafe.Pointer(cStr))
+这是因为c语言代码，需要自己分配字符串内存因此在返回时，也需要进行释放，否则会存在内存泄露问题
+
+2.编译动态链接库
+
+ go build -buildmode=c-shared -o libconcat.so libconcat.go
+
+python的调用，和之前有所不同，主要是需要设置argtypes和restype,以便在调用libconcat.so时，
+可以进行字符串格式转换
+
+
+注意，在python中输入或输出的字符串，均需为二进制格式。在使用要注意进行格式准话你
+
+
+在处理字符串时，两端都需要和c语言进行格式转换，
+还要注意对c语言的内存管理，以防止内存泄露
+
+ go build -buildmode=c-shared -o hello.so go_test.go
+
+python调用go语言是通过c语言实现的，可以将go原因打包成s
+然后让python通过ctypes加载so文件来实现python调用
+
+
+其中Sum函数上方的//export Sum是必须的，没有这个注释
+不会被识别称为导出的对象。export后面的字符
+是导出后的名字，
+import "C"是必须的
+
+go build -buildmode=c-shared -o sum.so main.go
+
+sum.so是编译后的文件，main.go是要编译的文件
+
+编译完成后会在当前目录生成sum.so和sum.h文件
+
+
+使用CDLL("./sum.so")加载so模块，
+然后使用.Test导向Test函数，这里必须和sum.h里一直
+test.restype=ctypes.c_init64将Test的函数返回类型
+声明为int64,这里的机器上，
+默认的结果使用的返回结果为最后使用test()来调用。
+
+除了上面的定义返回值的类型，还可以定义传入参数的类型
+
+argtypes将接受一个列表类型，里面是各个参数的类型
+
+这里是传int值，那string值呢？
+
+可以看到函数的参数类型为GoString,这个类型c语言是没有的
+
+GoString是一个结构体，有一个char类型的指针和一个代表长度的整数n
+
+那个在调用这个函数的时候，就需要传递一个GoString的值进去，
+python侧需要自己来写这个结构体定义
+
+接下去构建参数传递
+
+
+要使用字节流才行，因为是Ｃ的char类型指针
+最后设置接收类型为定义好的GoString就能调用了。
+也可以把返回值设置为string,
+在python里面也可以用这个GoString这个类给读出来。
+但是直接输出会输出一个内存地址，需要用result.p来说输出
+这个也是一个字节流
+
+go语言写的结构体，是没有办法导出的，所以结果的交互要用结构体的时候
+尽量用json之类的封装
+
